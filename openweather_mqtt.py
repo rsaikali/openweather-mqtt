@@ -3,9 +3,8 @@ import logging
 import os
 import time
 
-import requests
-
 import paho.mqtt.publish as publish
+import requests
 
 # Config from environment (see Dockerfile)
 OPENWEATHER_APP_ID = os.getenv('OPENWEATHER_APP_ID', 'YOUR_OPENWEATHER_APP_ID')
@@ -67,10 +66,10 @@ while True:
             msgs[f"{MQTT_SERVICE_TOPIC}/{k}"] = v
 
         # Publish openweather results on given MQTT broker every second, so we can view it often,
-        # but call Openweather API every ~10min (otherwise you'll get locked due to API rate limits)
+        # but call Openweather API every ~1min (otherwise you'll get locked due to API rate limits)
         last_update = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(data['dt']))
 
-        for i in range(600):
+        for i in range(60):
             logger.info(f"Publishing to {MQTT_SERVICE_HOST}:{MQTT_SERVICE_PORT} [last_update={last_update}]")
             for k, v in msgs.items():
                 publish.single(topic=k, payload=str(v), hostname=MQTT_SERVICE_HOST, port=MQTT_SERVICE_PORT, client_id=MQTT_CLIENT_ID)

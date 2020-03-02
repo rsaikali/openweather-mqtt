@@ -10,7 +10,7 @@ You'll need an Openweather account (free) and your city ID.
 - [Openweather free account](https://home.openweathermap.org/users/sign_up)
 - [Find your Openweather city ID](http://bulk.openweathermap.org/sample/city.list.json.gz)
 
-As Openweather API calls are limited to 1 per 10 minutes, the application will re-publish same data every seconds, waiting for next API call.
+As Openweather API calls are rate limited, the application will re-publish same data every seconds, waiting for next possible API call.
 
 ## How to use it?
 
