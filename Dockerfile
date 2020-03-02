@@ -8,6 +8,9 @@ ENV MQTT_SERVICE_PORT 1883
 ENV MQTT_SERVICE_TOPIC home/livingroom
 ENV MQTT_CLIENT_ID openweather-mqtt-service
 
+RUN apk add -U tzdata
+RUN cp /usr/share/zoneinfo/Europe/Paris /etc/localtime
+
 WORKDIR /opt
 
 COPY requirements.txt /opt/requirements.txt
