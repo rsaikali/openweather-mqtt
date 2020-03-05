@@ -62,9 +62,9 @@ while True:
         data = r.json()
 
         # Hack: set default rain to 0 if no rain indicated
-        data.set_default('rain', {})
-        data['rain'].set_default('1h', 0)
-        data['rain'].set_default('3h', 0)
+        data.setdefault('rain', {})
+        data['rain'].setdefault('1h', 0)
+        data['rain'].setdefault('3h', 0)
 
         if int(data['dt']) >= int(previous_last_update):
             previous_last_update = int(data['dt'])
