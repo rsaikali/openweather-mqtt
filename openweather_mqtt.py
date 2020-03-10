@@ -18,6 +18,16 @@ MQTT_CLIENT_ID = os.getenv('HOSTNAME', 'openweather-mqtt-service')
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s [%(name)s] %(levelname)8s %(message)s')
 logger = logging.getLogger(MQTT_CLIENT_ID)
 
+# Display config on startup
+logger.debug("#" * 80)
+logger.debug(f"# OPENWEATHER_APP_ID={OPENWEATHER_APP_ID}")
+logger.debug(f"# OPENWEATHER_CITY_ID={OPENWEATHER_CITY_ID}")
+logger.debug(f"# MQTT_SERVICE_HOST={MQTT_SERVICE_HOST}")
+logger.debug(f"# MQTT_SERVICE_PORT={MQTT_SERVICE_PORT}")
+logger.debug(f"# MQTT_SERVICE_TOPIC={MQTT_SERVICE_TOPIC}")
+logger.debug(f"# MQTT_CLIENT_ID={MQTT_CLIENT_ID}")
+logger.debug("#" * 80)
+
 
 def flatten_dict(dictionary, delimiter='.'):
     dictionary_ = dictionary
@@ -42,48 +52,41 @@ def flatten_dict(dictionary, delimiter='.'):
     return dictionary_
 
 
-# Display config on startup
-logger.debug("#" * 80)
-logger.debug(f"# OPENWEATHER_APP_ID={OPENWEATHER_APP_ID}")
-logger.debug(f"# OPENWEATHER_CITY_ID={OPENWEATHER_CITY_ID}")
-logger.debug(f"# MQTT_SERVICE_HOST={MQTT_SERVICE_HOST}")
-logger.debug(f"# MQTT_SERVICE_PORT={MQTT_SERVICE_PORT}")
-logger.debug(f"# MQTT_SERVICE_TOPIC={MQTT_SERVICE_TOPIC}")
-logger.debug(f"# MQTT_CLIENT_ID={MQTT_CLIENT_ID}")
-logger.debug("#" * 80)
+if __name__ == "__main__":
 
-previous_last_update = 0
-while True:
-    try:
+    previous_last_update = 0
 
-        logger.info("Connecting to OpenWeather for fresh weather information.")
-        url = f"http://api.openweathermap.org/data/2.5/weather?id={OPENWEATHER_CITY_ID}&appid={OPENWEATHER_APP_ID}&type=accurate&units=metric&lang=fr"
-        r = requests.get(url)
-        data = r.json()
+    while True:
 
-        # Hack: set default rain to 0 if no rain indicated
-        data.setdefault('rain', {})
-        data['rain'].setdefault('1h', 0)
-        data['rain'].setdefault('3h', 0)
+        try:
 
-        if int(data['dt']) >= int(previous_last_update):
-            previous_last_update = int(data['dt'])
+            logger.info("Connecting to OpenWeather for fresh weather information.")
+            url = f"http://api.openweathermap.org/data/2.5/weather?id={OPENWEATHER_CITY_ID}&appid={OPENWEATHER_APP_ID}&type=accurate&units=metric&lang=fr"
+            r = requests.get(url)
+            data = r.json()
 
-            msgs = {}
-            for k, v in sorted(flatten_dict(data, delimiter='/').items()):
-                logger.info(f"{k:24} ---> {v}")
-                msgs[f"{MQTT_SERVICE_TOPIC}/{k}"] = v
-        else:
-            logger.info("No updated data from Openweather...")
+            # Hack: set default rain to 0 if no rain indicated
+            data.setdefault('rain', {})
+            data['rain'].setdefault('1h', 0)
+            data['rain'].setdefault('3h', 0)
 
-        # Publish openweather results on given MQTT broker every second, so we can view it often,
-        # but call Openweather API every ~1min (otherwise you'll get locked due to API rate limits)
-        last_update = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(data['dt']))
-        for i in range(60):
-            logger.info(f"Publishing to {MQTT_SERVICE_HOST}:{MQTT_SERVICE_PORT} [last_update={last_update}]")
-            for k, v in msgs.items():
-                publish.single(topic=k, payload=str(v), hostname=MQTT_SERVICE_HOST, port=MQTT_SERVICE_PORT, client_id=MQTT_CLIENT_ID)
-            time.sleep(1)
+            if int(data['dt']) >= int(previous_last_update):
+                previous_last_update = int(data['dt'])
 
-    except Exception:
-        logger.error("An error occured:", exc_info=True)
+                msgs = []
+                for k, v in sorted(flatten_dict(data, delimiter='/').items()):
+                    logger.info(f"{k:24} ---> {v}")
+                    msgs.append({'topic': f"{MQTT_SERVICE_TOPIC}/{k}", 'payload': str(v)})
+            else:
+                logger.info("No updated data from Openweather...")
+
+            # Publish openweather results on given MQTT broker every second, so we can view it often,
+            # but call Openweather API every ~1min (otherwise you'll get locked due to API rate limits)
+            last_update = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(data['dt']))
+            for i in range(60):
+                logger.info(f"Publishing to {MQTT_SERVICE_HOST}:{MQTT_SERVICE_PORT} [last_update={last_update}]")
+                publish.multiple(msgs, hostname=MQTT_SERVICE_HOST, port=MQTT_SERVICE_PORT, client_id=MQTT_CLIENT_ID)
+                time.sleep(1)
+
+        except Exception:
+            logger.error("An error occured:", exc_info=True)
