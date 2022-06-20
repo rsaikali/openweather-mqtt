@@ -5,15 +5,25 @@ import time
 
 import paho.mqtt.publish as publish
 import requests
+import configparser
 
-# Config from environment (see Dockerfile)
-OPENWEATHER_APP_ID = os.getenv('OPENWEATHER_APP_ID', 'YOUR_OPENWEATHER_APP_ID')
-OPENWEATHER_CITY_ID = os.getenv('OPENWEATHER_CITY_ID', 'YOUR_OPENWEATHER_CITY_ID')
+#Read config.ini file
+config_obj = configparser.ConfigParser()
+config_obj.read("configfile.ini")
 
-MQTT_SERVICE_HOST = os.getenv('MQTT_SERVICE_HOST', 'mosquitto.local')
-MQTT_SERVICE_PORT = int(os.getenv('MQTT_SERVICE_PORT', 1883))
-MQTT_SERVICE_TOPIC = os.getenv('MQTT_SERVICE_TOPIC', 'openweather')
-MQTT_CLIENT_ID = os.getenv('HOSTNAME', 'openweather-mqtt-service')
+openweather_param = config_obj["openweather"]
+service_param = config_obj["service"]
+client_param = config_obj["client"]
+
+OPENWEATHER_APP_ID = openweather_param["api_key"]
+OPENWEATHER_APP_LANG = openweather_param["lang"]
+OPENWEATHER_CITY_ID = openweather_param["city_id"]
+
+MQTT_SERVICE_HOST = service_param["host"]
+MQTT_SERVICE_PORT = int(service_param["port"])
+MQTT_SERVICE_TOPIC = service_param["topic"]
+
+MQTT_CLIENT_ID = client_param["client_id"]
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s [%(name)s] %(levelname)8s %(message)s')
 logger = logging.getLogger(MQTT_CLIENT_ID)
@@ -61,7 +71,7 @@ if __name__ == "__main__":
         try:
 
             logger.info("Connecting to OpenWeather for fresh weather information.")
-            url = f"http://api.openweathermap.org/data/2.5/weather?id={OPENWEATHER_CITY_ID}&appid={OPENWEATHER_APP_ID}&type=accurate&units=metric&lang=fr"
+            url = f"http://api.openweathermap.org/data/2.5/weather?id={OPENWEATHER_CITY_ID}&appid={OPENWEATHER_APP_ID}&type=accurate&units=metric&lang={OPENWEATHER_APP_LANG}"
             r = requests.get(url)
             data = r.json()
 
